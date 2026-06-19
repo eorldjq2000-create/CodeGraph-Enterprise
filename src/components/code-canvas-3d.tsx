@@ -8,7 +8,7 @@ import { GraphData, getColorForExtension } from "@/lib/mcp/cypher";
 // Dynamically import ForceGraph3D to avoid SSR issues
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
 
-export function CodeCanvas3D({ data }: { data: GraphData }) {
+export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeClick?: (node: any) => void }) {
   const fgRef = useRef<any>();
 
   const nodeColor = useCallback((node: any) => {
@@ -36,6 +36,7 @@ export function CodeCanvas3D({ data }: { data: GraphData }) {
         linkDirectionalArrowLength={3.5}
         linkDirectionalArrowRelPos={1}
         enableNodeDrag={false}
+        onNodeClick={onNodeClick}
       />
     </div>
   );

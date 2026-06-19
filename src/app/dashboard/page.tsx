@@ -86,6 +86,7 @@ export default function DashboardPage() {
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">연결된 의존성:</span>
                 <span className="font-mono">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {data.links.filter((l: any) => l.source.id === selectedNode.id || l.target.id === selectedNode.id || l.source === selectedNode.id || l.target === selectedNode.id).length}개
                 </span>
               </div>

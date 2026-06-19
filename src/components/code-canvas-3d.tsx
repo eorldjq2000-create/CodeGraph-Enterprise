@@ -88,6 +88,22 @@ export function CodeCanvas3D({
     return true;
   }, [activeDirs, activeNodes, activeEdges, data]);
 
+  const linkWidth = useCallback((link: any) => {
+    const sNode = typeof link.source === 'object' ? link.source : data.nodes.find(n => n.id === link.source);
+    const tNode = typeof link.target === 'object' ? link.target : data.nodes.find(n => n.id === link.target);
+    
+    const sourceDirMatch = activeDirs.size === 0 || (sNode && sNode.dir && activeDirs.has(sNode.dir));
+    const targetDirMatch = activeDirs.size === 0 || (tNode && tNode.dir && activeDirs.has(tNode.dir));
+    
+    const sourceNodeMatch = activeNodes.size === 0 || (sNode && sNode.nodeType && activeNodes.has(sNode.nodeType));
+    const targetNodeMatch = activeNodes.size === 0 || (tNode && tNode.nodeType && activeNodes.has(tNode.nodeType));
+
+    const fullyHighlighted = (activeDirs.size === 0 || (sourceDirMatch && targetDirMatch)) && 
+                             (activeNodes.size === 0 || (sourceNodeMatch && targetNodeMatch));
+
+    return fullyHighlighted ? 0.6 : 0.1;
+  }, [activeDirs, activeNodes, data]);
+
   const linkColor = useCallback((link: any) => {
     const sNode = typeof link.source === 'object' ? link.source : data.nodes.find(n => n.id === link.source);
     const tNode = typeof link.target === 'object' ? link.target : data.nodes.find(n => n.id === link.target);
@@ -101,7 +117,7 @@ export function CodeCanvas3D({
     const fullyHighlighted = (activeDirs.size === 0 || (sourceDirMatch && targetDirMatch)) && 
                              (activeNodes.size === 0 || (sourceNodeMatch && targetNodeMatch));
 
-    const opacity = fullyHighlighted ? 0.35 : 0.05;
+    const opacity = fullyHighlighted ? 0.85 : 0.05;
 
     if (link.color === 'green') return `rgba(0, 255, 136, ${opacity})`;
     if (link.color === 'purple') return `rgba(176, 66, 255, ${opacity})`;
@@ -120,11 +136,7 @@ export function CodeCanvas3D({
         nodeThreeObject={nodeThreeObject} // Glowing stars
         linkColor={linkColor} // Dynamic cluster colors
         linkVisibility={linkVisibility} // Properly hide filtered edges
-        linkWidth={0.2} // Very thin, lots of overlapping lines
-        linkDirectionalParticles={3} // Restore data particles
-        linkDirectionalParticleWidth={1.5}
-        linkDirectionalParticleSpeed={0.006}
-        linkDirectionalParticleColor={() => "rgba(0, 229, 255, 0.8)"}
+        linkWidth={linkWidth} // Laser width
         linkDirectionalArrowLength={0}
         nodeRelSize={6}
         enableNodeDrag={true}

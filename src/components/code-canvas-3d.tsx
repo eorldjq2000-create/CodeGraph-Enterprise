@@ -63,12 +63,8 @@ export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeCli
         nodeLabel="name"
         backgroundColor="#020208" // Deep space black
         nodeThreeObject={nodeThreeObject} // Glowing stars
-        linkDirectionalParticles={4} // Data flowing particles
-        linkDirectionalParticleWidth={1.5}
-        linkDirectionalParticleSpeed={0.008}
-        linkDirectionalParticleColor={() => "#00ffff"} // Cyan glowing particles
-        linkColor={() => "rgba(0, 255, 255, 0.4)"} // Laser-thin cyan links
-        linkWidth={0.3} // Thin laser lines
+        linkColor={() => "rgba(0, 255, 255, 0.8)"} // Bright static cyan laser links
+        linkWidth={0.5} // Thin static laser lines
         linkDirectionalArrowLength={0}
         nodeRelSize={6}
         enableNodeDrag={true}

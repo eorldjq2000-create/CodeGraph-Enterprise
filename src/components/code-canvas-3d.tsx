@@ -21,62 +21,59 @@ export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeCli
     return getColorForExtension(node.name || "");
   }, []);
 
-  const nodeVal = useCallback((node: any) => {
-    return node.val || 1;
-  }, []);
-
   const nodeThreeObject = useCallback((node: any) => {
     const color = nodeColor(node);
-    const size = (node.val || 1) * 1.5;
+    const size = (node.val || 1);
     
-    // Create a circular glowing canvas texture
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
-    const context = canvas.getContext('2d');
-    if (context) {
-      const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)'); // Bright white core
-      gradient.addColorStop(0.3, color); // Node color aura
-      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)'); // Fade out
-      context.fillStyle = gradient;
-      context.fillRect(0, 0, 64, 64);
-    }
+    const group = new THREE.Group();
     
-    const texture = new THREE.CanvasTexture(canvas);
-    const spriteMaterial = new THREE.SpriteMaterial({ 
-      map: texture, 
-      color: 0xffffff, 
-      transparent: true,
+    // Core of the star (bright white)
+    const coreGeometry = new THREE.SphereGeometry(size, 16, 16);
+    const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    group.add(core);
+    
+    // Glowing aura (colored, transparent, additive blending)
+    const glowGeometry = new THREE.SphereGeometry(size * 1.8, 16, 16);
+    const glowMaterial = new THREE.MeshBasicMaterial({ 
+      color: new THREE.Color(color), 
+      transparent: true, 
+      opacity: 0.5, 
       blending: THREE.AdditiveBlending,
-      depthWrite: false
+      depthWrite: false 
     });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    group.add(glow);
     
-    const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(size, size, 1);
-    return sprite;
+    return group;
   }, [nodeColor]);
+
+  const handleNodeDragEnd = useCallback((node: any) => {
+    // Pin node position after dragging so it stays where you pulled it
+    node.fx = node.x;
+    node.fy = node.y;
+    node.fz = node.z;
+  }, []);
 
   return (
     <div className="w-full h-full bg-background relative">
       <ForceGraph3D
         ref={fgRef}
         graphData={data}
-        nodeColor={nodeColor}
-        nodeVal={nodeVal}
         nodeLabel="name"
         backgroundColor="#020208" // Deep space black
         nodeThreeObject={nodeThreeObject} // Glowing stars
-        linkDirectionalParticles={3} // Data flowing particles
-        linkDirectionalParticleWidth={2}
-        linkDirectionalParticleSpeed={0.006}
-        linkDirectionalParticleColor={() => "#80c0ff"} // Glowing blue particles
-        linkColor={() => "rgba(180, 220, 255, 0.4)"} // Brighter, more visible links
-        linkWidth={1.5} // Thicker links
-        linkDirectionalArrowLength={0} // Remove solid arrows for cleaner look
+        linkDirectionalParticles={4} // Data flowing particles
+        linkDirectionalParticleWidth={1.5}
+        linkDirectionalParticleSpeed={0.008}
+        linkDirectionalParticleColor={() => "#00ffff"} // Cyan glowing particles
+        linkColor={() => "rgba(0, 255, 255, 0.4)"} // Laser-thin cyan links
+        linkWidth={0.3} // Thin laser lines
+        linkDirectionalArrowLength={0}
         nodeRelSize={6}
         enableNodeDrag={true}
         onNodeClick={onNodeClick}
+        onNodeDragEnd={handleNodeDragEnd}
       />
     </div>
   );

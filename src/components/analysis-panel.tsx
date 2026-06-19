@@ -3,10 +3,9 @@
 import React, { useState } from "react";
 import { Search, CheckCircle2, Circle } from "lucide-react";
 
-export function AnalysisPanel() {
+export function AnalysisPanel({ activeDirs, toggleDir }: { activeDirs: Set<string>, toggleDir: (dir: string) => void }) {
   const [activeNodes, setActiveNodes] = useState<Set<string>>(new Set(['함수 (Function)', '폴더 (Folder)']));
   const [activeEdges, setActiveEdges] = useState<Set<string>>(new Set(['사용됨 (usage)']));
-  const [activeDirs, setActiveDirs] = useState<Set<string>>(new Set(['scripts']));
   const [showLabels, setShowLabels] = useState(true);
 
   const toggleNode = (label: string) => {
@@ -19,12 +18,6 @@ export function AnalysisPanel() {
     const next = new Set(activeEdges);
     if (next.has(label)) next.delete(label); else next.add(label);
     setActiveEdges(next);
-  };
-  
-  const toggleDir = (label: string) => {
-    const next = new Set(activeDirs);
-    if (next.has(label)) next.delete(label); else next.add(label);
-    setActiveDirs(next);
   };
 
   const setAll = () => {

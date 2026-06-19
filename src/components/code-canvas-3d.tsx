@@ -9,7 +9,7 @@ import { GraphData, getColorForExtension } from "@/lib/mcp/cypher";
 // Dynamically import ForceGraph3D to avoid SSR issues
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
 
-export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeClick?: (node: any) => void }) {
+export function CodeCanvas3D({ data, onNodeClick, activeDirs }: { data: GraphData, onNodeClick?: (node: any) => void, activeDirs: Set<string> }) {
   const fgRef = useRef<any>();
 
   const nodeColor = useCallback((node: any) => {
@@ -18,9 +18,7 @@ export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeCli
     if (node.clusterColor === 'cyan') return "#00e5ff";
     if (node.clusterColor === 'orange') return "#ff8800";
     
-    // Check if dead code
     if (node.isDeadCode) return "#666666"; 
-    // Check if spaghetti
     if (node.isSpaghetti) return "#FF003C"; 
     
     return getColorForExtension(node.name || "");
@@ -30,20 +28,23 @@ export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeCli
     const color = nodeColor(node);
     const size = (node.val || 1);
     
+    const isHighlighted = activeDirs.size === 0 || activeDirs.has(node.dir);
+    const scale = isHighlighted ? 1 : 0.3; // shrink unselected
+    const opacity = isHighlighted ? 0.6 : 0.05; // dim unselected
+    const coreOpacity = isHighlighted ? 1 : 0.1;
+
     const group = new THREE.Group();
     
-    // Core of the star (bright white)
-    const coreGeometry = new THREE.SphereGeometry(size, 16, 16);
-    const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const coreGeometry = new THREE.SphereGeometry(size * scale, 16, 16);
+    const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: coreOpacity });
     const core = new THREE.Mesh(coreGeometry, coreMaterial);
     group.add(core);
     
-    // Glowing aura (colored, transparent, additive blending)
-    const glowGeometry = new THREE.SphereGeometry(size * 1.8, 16, 16);
+    const glowGeometry = new THREE.SphereGeometry(size * 1.8 * scale, 16, 16);
     const glowMaterial = new THREE.MeshBasicMaterial({ 
       color: new THREE.Color(color), 
       transparent: true, 
-      opacity: 0.5, 
+      opacity: opacity, 
       blending: THREE.AdditiveBlending,
       depthWrite: false 
     });
@@ -51,22 +52,32 @@ export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeCli
     group.add(glow);
     
     return group;
-  }, [nodeColor]);
+  }, [nodeColor, activeDirs]);
 
   const handleNodeDragEnd = useCallback((node: any) => {
-    // Pin node position after dragging so it stays where you pulled it
     node.fx = node.x;
     node.fy = node.y;
     node.fz = node.z;
   }, []);
 
   const linkColor = useCallback((link: any) => {
-    if (link.color === 'green') return "rgba(0, 255, 136, 0.25)";
-    if (link.color === 'purple') return "rgba(176, 66, 255, 0.25)";
-    if (link.color === 'cyan') return "rgba(0, 229, 255, 0.25)";
-    if (link.color === 'orange') return "rgba(255, 136, 0, 0.25)";
-    return "rgba(255, 255, 255, 0.1)";
-  }, []);
+    // Both source and target are replaced by full node objects internally by the graph engine
+    const sNode = typeof link.source === 'object' ? link.source : data.nodes.find(n => n.id === link.source);
+    const tNode = typeof link.target === 'object' ? link.target : data.nodes.find(n => n.id === link.target);
+    
+    const sourceHighlighted = activeDirs.size === 0 || (sNode && sNode.dir && activeDirs.has(sNode.dir));
+    const targetHighlighted = activeDirs.size === 0 || (tNode && tNode.dir && activeDirs.has(tNode.dir));
+    
+    if (activeDirs.size > 0 && !sourceHighlighted && !targetHighlighted) return "rgba(0,0,0,0)";
+    
+    const opacity = (activeDirs.size === 0 || (sourceHighlighted && targetHighlighted)) ? 0.25 : 0.03;
+
+    if (link.color === 'green') return `rgba(0, 255, 136, ${opacity})`;
+    if (link.color === 'purple') return `rgba(176, 66, 255, ${opacity})`;
+    if (link.color === 'cyan') return `rgba(0, 229, 255, ${opacity})`;
+    if (link.color === 'orange') return `rgba(255, 136, 0, ${opacity})`;
+    return `rgba(255, 255, 255, ${opacity * 0.4})`;
+  }, [activeDirs, data]);
 
   return (
     <div className="w-full h-full bg-background relative">

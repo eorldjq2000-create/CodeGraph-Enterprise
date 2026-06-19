@@ -14,18 +14,26 @@ export default function DashboardPage() {
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+  const [activeDirs, setActiveDirs] = useState<Set<string>>(new Set([]));
+
+  const toggleDir = (label: string) => {
+    const next = new Set(activeDirs);
+    if (next.has(label)) next.delete(label); else next.add(label);
+    setActiveDirs(next);
+  };
 
   useEffect(() => {
     const mockNodes: any[] = [];
     const mockLinks: any[] = [];
     
-    // Generate massive clusters to mimic the dense star-field look
     const clusters = [
       { id: 'c1', size: 150, colorType: 'green' }, // Huge green cluster
       { id: 'c2', size: 120, colorType: 'purple' }, // Purple cluster
       { id: 'c3', size: 80, colorType: 'cyan' }, // Cyan cluster
       { id: 'c4', size: 60, colorType: 'orange' }, // Orange cluster
     ];
+
+    const dirNames = ["cli-mcp-z00032", "cmd", "docs", "graph-ui", "internal", "scripts", "src", "test-infrastructure", "tests", "tools", "vendored"];
 
     let nodeId = 0;
     clusters.forEach((cluster, i) => {
@@ -34,11 +42,13 @@ export default function DashboardPage() {
       for (let j = 0; j < cluster.size; j++) {
         const id = `n${nodeId++}`;
         clusterNodes.push(id);
+        const randomDir = dirNames[Math.floor(Math.random() * dirNames.length)];
         mockNodes.push({
           id,
           group: i,
-          val: Math.random() > 0.95 ? 4 : (Math.random() > 0.8 ? 2 : 0.5), // Mostly tiny stars, few big ones
-          name: `sys_${cluster.colorType}_${id}.ts`,
+          val: Math.random() > 0.95 ? 4 : (Math.random() > 0.8 ? 2 : 0.5), 
+          name: `${randomDir}/sys_${cluster.colorType}_${id}.ts`,
+          dir: randomDir, // Save the randomly assigned directory
           clusterColor: cluster.colorType,
           isDeadCode: Math.random() > 0.98,
           isSpaghetti: Math.random() > 0.98
@@ -91,11 +101,11 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen w-full relative overflow-hidden bg-[#020208] text-foreground">
-      <AnalysisPanel />
+      <AnalysisPanel activeDirs={activeDirs} toggleDir={toggleDir} />
       
       {/* 3D Canvas */}
       <div className="absolute inset-0 z-0 cursor-crosshair">
-        <CodeCanvas3D data={data} onNodeClick={(node) => { setSelectedNode(node); setAnalysisResult(null); setIsAnalyzing(false); }} />
+        <CodeCanvas3D data={data} activeDirs={activeDirs} onNodeClick={(node) => { setSelectedNode(node); setAnalysisResult(null); setIsAnalyzing(false); }} />
       </div>
 
       {/* Node Detail Panel (Functionality) */}

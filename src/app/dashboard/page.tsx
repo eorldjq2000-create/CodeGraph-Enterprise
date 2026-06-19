@@ -11,6 +11,8 @@ export default function DashboardPage() {
   const [data, setData] = useState<GraphData>({ nodes: [], links: [] });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
 
   useEffect(() => {
     // Generate an impressive realistic mock architecture
@@ -57,13 +59,35 @@ export default function DashboardPage() {
     setData({ nodes: mockNodes, links: mockLinks });
   }, []);
 
+  const handleAnalyzeClick = () => {
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+    // Simulate AI analysis delay
+    setTimeout(() => {
+      setIsAnalyzing(false);
+      setAnalysisResult(
+        selectedNode?.isDeadCode 
+          ? "이 파일은 다른 모듈에서 전혀 호출되지 않고 있습니다. 안전하게 삭제하여 코드베이스를 최적화할 수 있습니다." 
+          : selectedNode?.isSpaghetti 
+            ? "순환 참조와 과도한 의존성이 감지되었습니다. 3개 이상의 모듈로 분리하는 리팩토링을 권장합니다." 
+            : "코드 상태가 매우 양호합니다. 캡슐화 규칙을 잘 준수하고 있습니다."
+      );
+    }, 1500);
+  };
+
+  const closeNodeDetail = () => {
+    setSelectedNode(null);
+    setIsAnalyzing(false);
+    setAnalysisResult(null);
+  };
+
   return (
-    <div className="flex h-screen w-full relative overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-full relative overflow-hidden bg-[#020208] text-foreground">
       <AnalysisPanel />
       
       {/* 3D Canvas */}
       <div className="absolute inset-0 z-0 cursor-crosshair">
-        <CodeCanvas3D data={data} onNodeClick={(node) => setSelectedNode(node)} />
+        <CodeCanvas3D data={data} onNodeClick={(node) => { setSelectedNode(node); setAnalysisResult(null); setIsAnalyzing(false); }} />
       </div>
 
       {/* Node Detail Panel (Functionality) */}
@@ -75,7 +99,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-sm font-semibold text-blue-400 truncate">
                   {selectedNode.name}
                 </CardTitle>
-                <button onClick={() => setSelectedNode(null)} className="text-muted-foreground hover:text-white transition-colors">✕</button>
+                <button onClick={closeNodeDetail} className="text-muted-foreground hover:text-white transition-colors">✕</button>
               </div>
             </CardHeader>
             <CardContent className="pt-4 flex flex-col gap-3">
@@ -97,11 +121,26 @@ export default function DashboardPage() {
                 {!selectedNode.isSpaghetti && !selectedNode.isDeadCode && <Badge className="bg-green-600">상태 양호</Badge>}
               </div>
 
-              <div className="mt-4">
-                <button className="w-full py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors">
-                  소스 코드 분석하기
-                </button>
-              </div>
+              {analysisResult ? (
+                <div className="mt-4 p-3 bg-blue-950/50 border border-blue-800/50 rounded-md text-xs leading-relaxed text-blue-200">
+                  <strong className="text-blue-400 block mb-1">🤖 AI 분석 결과:</strong>
+                  {analysisResult}
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <button 
+                    onClick={handleAnalyzeClick}
+                    disabled={isAnalyzing}
+                    className="w-full py-2 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900 text-white rounded-md transition-colors flex justify-center items-center"
+                  >
+                    {isAnalyzing ? (
+                      <span className="animate-pulse">AI 분석 중...</span>
+                    ) : (
+                      "소스 코드 분석하기"
+                    )}
+                  </button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -109,10 +148,10 @@ export default function DashboardPage() {
       
       {/* Title / Info overlay */}
       <div className="absolute top-4 left-4 z-10 pointer-events-none">
-        <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+        <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
           CodeGraph Enterprise
         </h1>
-        <p className="text-xs text-muted-foreground mt-1">프로젝트 구조 3D 시각화 엔진</p>
+        <p className="text-xs text-blue-300/80 mt-1">미래지향적 프로젝트 시각화 엔진</p>
       </div>
     </div>
   );

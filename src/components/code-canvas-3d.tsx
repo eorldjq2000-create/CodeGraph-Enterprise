@@ -32,10 +32,15 @@ export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeCli
         nodeColor={nodeColor}
         nodeVal={nodeVal}
         nodeLabel="name"
-        backgroundColor="rgba(0,0,0,0)" // Transparent to inherit background
-        linkDirectionalArrowLength={3.5}
-        linkDirectionalArrowRelPos={1}
-        enableNodeDrag={false}
+        backgroundColor="#020208" // Deep space black
+        linkDirectionalParticles={3} // Data flowing particles
+        linkDirectionalParticleWidth={1.5}
+        linkDirectionalParticleSpeed={0.006}
+        linkDirectionalParticleColor={() => "#4da6ff"} // Glowing blue particles
+        linkColor={() => "rgba(100, 150, 255, 0.15)"} // Faint glowing links
+        linkDirectionalArrowLength={0} // Remove solid arrows for cleaner look
+        nodeRelSize={6}
+        enableNodeDrag={true}
         onNodeClick={onNodeClick}
       />
     </div>

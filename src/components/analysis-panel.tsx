@@ -3,32 +3,18 @@
 import React, { useState } from "react";
 import { Search, CheckCircle2, Circle } from "lucide-react";
 
-export function AnalysisPanel({ activeDirs, toggleDir }: { activeDirs: Set<string>, toggleDir: (dir: string) => void }) {
-  const [activeNodes, setActiveNodes] = useState<Set<string>>(new Set(['함수 (Function)', '폴더 (Folder)']));
-  const [activeEdges, setActiveEdges] = useState<Set<string>>(new Set(['사용됨 (usage)']));
+export function AnalysisPanel({ 
+  activeDirs, toggleDir,
+  activeNodes, toggleNode,
+  activeEdges, toggleEdge,
+  setAllFilters, setNoneFilters
+}: { 
+  activeDirs: Set<string>; toggleDir: (dir: string) => void;
+  activeNodes: Set<string>; toggleNode: (node: string) => void;
+  activeEdges: Set<string>; toggleEdge: (edge: string) => void;
+  setAllFilters: () => void; setNoneFilters: () => void;
+}) {
   const [showLabels, setShowLabels] = useState(true);
-
-  const toggleNode = (label: string) => {
-    const next = new Set(activeNodes);
-    if (next.has(label)) next.delete(label); else next.add(label);
-    setActiveNodes(next);
-  };
-  
-  const toggleEdge = (label: string) => {
-    const next = new Set(activeEdges);
-    if (next.has(label)) next.delete(label); else next.add(label);
-    setActiveEdges(next);
-  };
-
-  const setAll = () => {
-    setActiveNodes(new Set(['함수 (Function)', '필드 (Field)', '클래스 (Class)', '파일 (File)', '모듈 (Module)', '변수 (Variable)', '폴더 (Folder)', '열거형 (Enum)', '섹션 (Section)', '메서드 (Method)', '인터페이스 (Interface)', '라우트 (Route)', '타입 (Type)', '프로젝트 (Project)']));
-    setActiveEdges(new Set(['정의함 (defines)', '사용됨 (usage)', '호출함 (calls)', '파일 포함 (contains file)', '폴더 포함 (contains folder)', '작성함 (writes)', '메서드 정의 (defines method)', '설정함 (configures)', '동시 변경 (changes with)', '상속함 (inherits)', '처리함 (handles)', '발생시킴 (raises)']));
-  };
-
-  const setNone = () => {
-    setActiveNodes(new Set());
-    setActiveEdges(new Set());
-  };
 
   return (
     <div className="absolute top-0 right-0 h-screen w-[340px] z-20 flex flex-col bg-[#0b1016]/95 backdrop-blur-xl border-l border-white/5 shadow-2xl text-gray-300 font-sans overflow-hidden">
@@ -37,9 +23,9 @@ export function AnalysisPanel({ activeDirs, toggleDir }: { activeDirs: Set<strin
       <div className="px-5 py-6 flex justify-between items-center border-b border-white/5">
         <h2 className="text-xs font-bold tracking-widest text-gray-400 uppercase">필터 (FILTERS)</h2>
         <div className="flex gap-3 text-xs">
-          <button onClick={setAll} className="text-[#00e5ff] hover:text-white transition-colors">모두 (All)</button>
+          <button onClick={setAllFilters} className="text-[#00e5ff] hover:text-white transition-colors">모두 (All)</button>
           <span className="text-gray-600">|</span>
-          <button onClick={setNone} className="text-[#00e5ff] hover:text-white transition-colors">없음 (None)</button>
+          <button onClick={setNoneFilters} className="text-[#00e5ff] hover:text-white transition-colors">없음 (None)</button>
         </div>
       </div>
 

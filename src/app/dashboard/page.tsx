@@ -14,12 +14,37 @@ export default function DashboardPage() {
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+  
   const [activeDirs, setActiveDirs] = useState<Set<string>>(new Set([]));
+  const [activeNodes, setActiveNodes] = useState<Set<string>>(new Set([]));
+  const [activeEdges, setActiveEdges] = useState<Set<string>>(new Set([]));
 
   const toggleDir = (label: string) => {
     const next = new Set(activeDirs);
     if (next.has(label)) next.delete(label); else next.add(label);
     setActiveDirs(next);
+  };
+  
+  const toggleNode = (label: string) => {
+    const next = new Set(activeNodes);
+    if (next.has(label)) next.delete(label); else next.add(label);
+    setActiveNodes(next);
+  };
+  
+  const toggleEdge = (label: string) => {
+    const next = new Set(activeEdges);
+    if (next.has(label)) next.delete(label); else next.add(label);
+    setActiveEdges(next);
+  };
+
+  const setAllFilters = () => {
+    setActiveNodes(new Set(['함수 (Function)', '필드 (Field)', '클래스 (Class)', '파일 (File)', '모듈 (Module)', '변수 (Variable)', '폴더 (Folder)', '열거형 (Enum)', '섹션 (Section)', '메서드 (Method)', '인터페이스 (Interface)', '라우트 (Route)', '타입 (Type)', '프로젝트 (Project)']));
+    setActiveEdges(new Set(['정의함 (defines)', '사용됨 (usage)', '호출함 (calls)', '파일 포함 (contains file)', '폴더 포함 (contains folder)', '작성함 (writes)', '메서드 정의 (defines method)', '설정함 (configures)', '동시 변경 (changes with)', '상속함 (inherits)', '처리함 (handles)', '발생시킴 (raises)']));
+  };
+
+  const setNoneFilters = () => {
+    setActiveNodes(new Set());
+    setActiveEdges(new Set());
   };
 
   useEffect(() => {
@@ -27,49 +52,52 @@ export default function DashboardPage() {
     const mockLinks: any[] = [];
     
     const clusters = [
-      { id: 'c1', size: 150, colorType: 'green' }, // Huge green cluster
-      { id: 'c2', size: 120, colorType: 'purple' }, // Purple cluster
-      { id: 'c3', size: 80, colorType: 'cyan' }, // Cyan cluster
-      { id: 'c4', size: 60, colorType: 'orange' }, // Orange cluster
+      { id: 'c1', size: 150, colorType: 'green' }, 
+      { id: 'c2', size: 120, colorType: 'purple' }, 
+      { id: 'c3', size: 80, colorType: 'cyan' }, 
+      { id: 'c4', size: 60, colorType: 'orange' }, 
     ];
 
     const dirNames = ["cli-mcp-z00032", "cmd", "docs", "graph-ui", "internal", "scripts", "src", "test-infrastructure", "tests", "tools", "vendored"];
+    const nodeTypes = ['함수 (Function)', '필드 (Field)', '클래스 (Class)', '파일 (File)', '모듈 (Module)', '변수 (Variable)', '폴더 (Folder)', '열거형 (Enum)', '섹션 (Section)', '메서드 (Method)', '인터페이스 (Interface)', '라우트 (Route)', '타입 (Type)', '프로젝트 (Project)'];
+    const edgeTypes = ['정의함 (defines)', '사용됨 (usage)', '호출함 (calls)', '파일 포함 (contains file)', '폴더 포함 (contains folder)', '작성함 (writes)', '메서드 정의 (defines method)', '설정함 (configures)', '동시 변경 (changes with)', '상속함 (inherits)', '처리함 (handles)', '발생시킴 (raises)'];
 
     let nodeId = 0;
     clusters.forEach((cluster, i) => {
       const clusterNodes = [];
-      // Generate nodes
       for (let j = 0; j < cluster.size; j++) {
         const id = `n${nodeId++}`;
         clusterNodes.push(id);
         const randomDir = dirNames[Math.floor(Math.random() * dirNames.length)];
+        const randomNodeType = nodeTypes[Math.floor(Math.random() * nodeTypes.length)];
         mockNodes.push({
           id,
           group: i,
           val: Math.random() > 0.95 ? 4 : (Math.random() > 0.8 ? 2 : 0.5), 
           name: `${randomDir}/sys_${cluster.colorType}_${id}.ts`,
-          dir: randomDir, // Save the randomly assigned directory
+          dir: randomDir, 
+          nodeType: randomNodeType,
           clusterColor: cluster.colorType,
           isDeadCode: Math.random() > 0.98,
           isSpaghetti: Math.random() > 0.98
         });
       }
       
-      // Connect nodes within the cluster densely
       for (let j = 0; j < cluster.size * 2.5; j++) {
         const source = clusterNodes[Math.floor(Math.random() * clusterNodes.length)];
         const target = clusterNodes[Math.floor(Math.random() * clusterNodes.length)];
+        const randomEdgeType = edgeTypes[Math.floor(Math.random() * edgeTypes.length)];
         if (source !== target) {
-          mockLinks.push({ source, target, color: cluster.colorType });
+          mockLinks.push({ source, target, color: cluster.colorType, edgeType: randomEdgeType });
         }
       }
       
-      // Connect clusters to previous clusters
       if (i > 0) {
         for (let k = 0; k < 30; k++) {
           const source = `n${Math.floor(Math.random() * (nodeId - cluster.size))}`;
           const target = clusterNodes[Math.floor(Math.random() * clusterNodes.length)];
-          mockLinks.push({ source, target, color: 'mixed' });
+          const randomEdgeType = edgeTypes[Math.floor(Math.random() * edgeTypes.length)];
+          mockLinks.push({ source, target, color: 'mixed', edgeType: randomEdgeType });
         }
       }
     });
@@ -101,11 +129,22 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen w-full relative overflow-hidden bg-[#020208] text-foreground">
-      <AnalysisPanel activeDirs={activeDirs} toggleDir={toggleDir} />
+      <AnalysisPanel 
+        activeDirs={activeDirs} toggleDir={toggleDir}
+        activeNodes={activeNodes} toggleNode={toggleNode}
+        activeEdges={activeEdges} toggleEdge={toggleEdge}
+        setAllFilters={setAllFilters} setNoneFilters={setNoneFilters}
+      />
       
       {/* 3D Canvas */}
       <div className="absolute inset-0 z-0 cursor-crosshair">
-        <CodeCanvas3D data={data} activeDirs={activeDirs} onNodeClick={(node) => { setSelectedNode(node); setAnalysisResult(null); setIsAnalyzing(false); }} />
+        <CodeCanvas3D 
+          data={data} 
+          activeDirs={activeDirs} 
+          activeNodes={activeNodes}
+          activeEdges={activeEdges}
+          onNodeClick={(node) => { setSelectedNode(node); setAnalysisResult(null); setIsAnalyzing(false); }} 
+        />
       </div>
 
       {/* Node Detail Panel (Functionality) */}

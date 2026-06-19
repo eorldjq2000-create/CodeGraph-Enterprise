@@ -15,46 +15,53 @@ export default function DashboardPage() {
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
 
   useEffect(() => {
-    // Generate an impressive realistic mock architecture
-    const mockNodes = [
-      // Core
-      { id: '1', group: 1, val: 12, name: 'src/core/engine.ts', isSpaghetti: true },
-      { id: '2', group: 1, val: 8, name: 'src/core/parser.ts' },
-      { id: '3', group: 1, val: 6, name: 'src/core/analyzer.ts' },
-      // API
-      { id: '4', group: 2, val: 5, name: 'src/api/routes.go' },
-      { id: '5', group: 2, val: 4, name: 'src/api/handlers.go' },
-      { id: '6', group: 2, val: 7, name: 'src/api/auth.go' },
-      // DB
-      { id: '7', group: 3, val: 9, name: 'src/db/models.rs' },
-      { id: '8', group: 3, val: 5, name: 'src/db/queries.rs' },
-      { id: '9', group: 3, val: 2, name: 'src/db/migrations.json' },
-      // Utils
-      { id: '10', group: 4, val: 2, name: 'src/utils/logger.ts' },
-      { id: '11', group: 4, val: 1, name: 'src/utils/math_dead.ts', isDeadCode: true },
-      { id: '12', group: 4, val: 1, name: 'src/utils/string_dead.ts', isDeadCode: true },
-      // Frontend
-      { id: '13', group: 5, val: 6, name: 'src/components/App.tsx' },
-      { id: '14', group: 5, val: 4, name: 'src/components/Header.tsx' },
-      { id: '15', group: 5, val: 8, name: 'src/components/GraphView.tsx' },
-    ];
+    const mockNodes: any[] = [];
+    const mockLinks: any[] = [];
     
-    const mockLinks = [
-      // Core <-> DB
-      { source: '1', target: '7' }, { source: '2', target: '7' }, { source: '3', target: '8' },
-      // API <-> Core
-      { source: '4', target: '1' }, { source: '5', target: '1' }, { source: '5', target: '2' }, { source: '6', target: '1' },
-      // API <-> DB
-      { source: '6', target: '7' },
-      // Frontend <-> API
-      { source: '13', target: '4' }, { source: '15', target: '4' },
-      // Core internal
-      { source: '1', target: '2' }, { source: '1', target: '3' }, { source: '2', target: '3' },
-      // Utils (Logger used everywhere)
-      { source: '1', target: '10' }, { source: '4', target: '10' }, { source: '7', target: '10' },
-      // Frontend internal
-      { source: '13', target: '14' }, { source: '13', target: '15' }
+    // Generate massive clusters to mimic the dense star-field look
+    const clusters = [
+      { id: 'c1', size: 150, colorType: 'green' }, // Huge green cluster
+      { id: 'c2', size: 120, colorType: 'purple' }, // Purple cluster
+      { id: 'c3', size: 80, colorType: 'cyan' }, // Cyan cluster
+      { id: 'c4', size: 60, colorType: 'orange' }, // Orange cluster
     ];
+
+    let nodeId = 0;
+    clusters.forEach((cluster, i) => {
+      const clusterNodes = [];
+      // Generate nodes
+      for (let j = 0; j < cluster.size; j++) {
+        const id = `n${nodeId++}`;
+        clusterNodes.push(id);
+        mockNodes.push({
+          id,
+          group: i,
+          val: Math.random() > 0.95 ? 4 : (Math.random() > 0.8 ? 2 : 0.5), // Mostly tiny stars, few big ones
+          name: `sys_${cluster.colorType}_${id}.ts`,
+          clusterColor: cluster.colorType,
+          isDeadCode: Math.random() > 0.98,
+          isSpaghetti: Math.random() > 0.98
+        });
+      }
+      
+      // Connect nodes within the cluster densely
+      for (let j = 0; j < cluster.size * 2.5; j++) {
+        const source = clusterNodes[Math.floor(Math.random() * clusterNodes.length)];
+        const target = clusterNodes[Math.floor(Math.random() * clusterNodes.length)];
+        if (source !== target) {
+          mockLinks.push({ source, target, color: cluster.colorType });
+        }
+      }
+      
+      // Connect clusters to previous clusters
+      if (i > 0) {
+        for (let k = 0; k < 30; k++) {
+          const source = `n${Math.floor(Math.random() * (nodeId - cluster.size))}`;
+          const target = clusterNodes[Math.floor(Math.random() * clusterNodes.length)];
+          mockLinks.push({ source, target, color: 'mixed' });
+        }
+      }
+    });
     
     setData({ nodes: mockNodes, links: mockLinks });
   }, []);

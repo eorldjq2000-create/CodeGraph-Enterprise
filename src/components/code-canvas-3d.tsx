@@ -13,10 +13,15 @@ export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeCli
   const fgRef = useRef<any>();
 
   const nodeColor = useCallback((node: any) => {
+    if (node.clusterColor === 'green') return "#00ff88";
+    if (node.clusterColor === 'purple') return "#b042ff";
+    if (node.clusterColor === 'cyan') return "#00e5ff";
+    if (node.clusterColor === 'orange') return "#ff8800";
+    
     // Check if dead code
-    if (node.isDeadCode) return "#666666"; // Desaturated Gray
+    if (node.isDeadCode) return "#666666"; 
     // Check if spaghetti
-    if (node.isSpaghetti) return "#FF003C"; // Neon Red
+    if (node.isSpaghetti) return "#FF003C"; 
     
     return getColorForExtension(node.name || "");
   }, []);
@@ -55,6 +60,14 @@ export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeCli
     node.fz = node.z;
   }, []);
 
+  const linkColor = useCallback((link: any) => {
+    if (link.color === 'green') return "rgba(0, 255, 136, 0.25)";
+    if (link.color === 'purple') return "rgba(176, 66, 255, 0.25)";
+    if (link.color === 'cyan') return "rgba(0, 229, 255, 0.25)";
+    if (link.color === 'orange') return "rgba(255, 136, 0, 0.25)";
+    return "rgba(255, 255, 255, 0.1)";
+  }, []);
+
   return (
     <div className="w-full h-full bg-background relative">
       <ForceGraph3D
@@ -63,8 +76,8 @@ export function CodeCanvas3D({ data, onNodeClick }: { data: GraphData, onNodeCli
         nodeLabel="name"
         backgroundColor="#020208" // Deep space black
         nodeThreeObject={nodeThreeObject} // Glowing stars
-        linkColor={() => "rgba(0, 255, 255, 0.8)"} // Bright static cyan laser links
-        linkWidth={0.5} // Thin static laser lines
+        linkColor={linkColor} // Dynamic cluster colors
+        linkWidth={0.2} // Very thin, lots of overlapping lines
         linkDirectionalArrowLength={0}
         nodeRelSize={6}
         enableNodeDrag={true}

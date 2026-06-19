@@ -69,7 +69,7 @@ export function CodeCanvas3D({
     node.fz = node.z;
   }, []);
 
-  const linkColor = useCallback((link: any) => {
+  const linkVisibility = useCallback((link: any) => {
     const sNode = typeof link.source === 'object' ? link.source : data.nodes.find(n => n.id === link.source);
     const tNode = typeof link.target === 'object' ? link.target : data.nodes.find(n => n.id === link.target);
     
@@ -81,21 +81,34 @@ export function CodeCanvas3D({
 
     const edgeTypeMatch = activeEdges.size === 0 || activeEdges.has(link.edgeType);
 
-    if (activeDirs.size > 0 && (!sourceDirMatch && !targetDirMatch)) return "rgba(0,0,0,0)";
-    if (activeNodes.size > 0 && (!sourceNodeMatch && !targetNodeMatch)) return "rgba(0,0,0,0)";
-    if (!edgeTypeMatch) return "rgba(0,0,0,0)";
+    if (activeDirs.size > 0 && (!sourceDirMatch && !targetDirMatch)) return false;
+    if (activeNodes.size > 0 && (!sourceNodeMatch && !targetNodeMatch)) return false;
+    if (!edgeTypeMatch) return false;
     
+    return true;
+  }, [activeDirs, activeNodes, activeEdges, data]);
+
+  const linkColor = useCallback((link: any) => {
+    const sNode = typeof link.source === 'object' ? link.source : data.nodes.find(n => n.id === link.source);
+    const tNode = typeof link.target === 'object' ? link.target : data.nodes.find(n => n.id === link.target);
+    
+    const sourceDirMatch = activeDirs.size === 0 || (sNode && sNode.dir && activeDirs.has(sNode.dir));
+    const targetDirMatch = activeDirs.size === 0 || (tNode && tNode.dir && activeDirs.has(tNode.dir));
+    
+    const sourceNodeMatch = activeNodes.size === 0 || (sNode && sNode.nodeType && activeNodes.has(sNode.nodeType));
+    const targetNodeMatch = activeNodes.size === 0 || (tNode && tNode.nodeType && activeNodes.has(tNode.nodeType));
+
     const fullyHighlighted = (activeDirs.size === 0 || (sourceDirMatch && targetDirMatch)) && 
                              (activeNodes.size === 0 || (sourceNodeMatch && targetNodeMatch));
 
-    const opacity = fullyHighlighted ? 0.25 : 0.03;
+    const opacity = fullyHighlighted ? 0.35 : 0.05;
 
     if (link.color === 'green') return `rgba(0, 255, 136, ${opacity})`;
     if (link.color === 'purple') return `rgba(176, 66, 255, ${opacity})`;
     if (link.color === 'cyan') return `rgba(0, 229, 255, ${opacity})`;
     if (link.color === 'orange') return `rgba(255, 136, 0, ${opacity})`;
     return `rgba(255, 255, 255, ${opacity * 0.4})`;
-  }, [activeDirs, activeNodes, activeEdges, data]);
+  }, [activeDirs, activeNodes, data]);
 
   return (
     <div className="w-full h-full bg-background relative">
@@ -106,7 +119,12 @@ export function CodeCanvas3D({
         backgroundColor="#020208" // Deep space black
         nodeThreeObject={nodeThreeObject} // Glowing stars
         linkColor={linkColor} // Dynamic cluster colors
+        linkVisibility={linkVisibility} // Properly hide filtered edges
         linkWidth={0.2} // Very thin, lots of overlapping lines
+        linkDirectionalParticles={3} // Restore data particles
+        linkDirectionalParticleWidth={1.5}
+        linkDirectionalParticleSpeed={0.006}
+        linkDirectionalParticleColor={() => "rgba(0, 229, 255, 0.8)"}
         linkDirectionalArrowLength={0}
         nodeRelSize={6}
         enableNodeDrag={true}

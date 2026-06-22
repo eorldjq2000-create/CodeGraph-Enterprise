@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Copy, Scissors } from "lucide-react";
@@ -54,32 +54,27 @@ export function TokenReducerPanel({ selectedNode, onClose }: { selectedNode: any
     }, null, 0); // 공백을 0으로 설정하여 문자열 토큰 자체를 극소화
   };
 
-  const rawDummyCode = `
-import { DependencyGraph } from '@/lib/graph';
-import { TokenReducer } from '@/lib/optimizer';
+  const [rawCode, setRawCode] = useState<string>("");
+  const [finalMinifiedContext, setFinalMinifiedContext] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
 
-/* 
- * This is a highly complex module with thousands of lines of logic
- * and massive internal implementations.
- */
-export class ${selectedNode?.name?.split('/').pop()?.split('.')[0] || 'NodeClass'} {
-  private graph: DependencyGraph;
-
-  constructor() {
-    this.graph = new DependencyGraph();
-    // hundreds of lines of init...
-  }
-
-  // Parses the entire AST
-  public async parseAST(file: string): Promise<any> {
-    console.log("Parsing", file);
-    // ... massive logic ...
-    return {};
-  }
-}
-  `;
-
-  const finalMinifiedContext = compressContext(rawDummyCode, selectedNode?.name || 'unknown', selectedNode?.val || 0);
+  useEffect(() => {
+    if (selectedNode?.id) {
+      setIsLoading(true);
+      fetch(`/api/mcp/file?path=${encodeURIComponent(selectedNode.id)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.content) {
+            setRawCode(data.content);
+            setFinalMinifiedContext(compressContext(data.content, selectedNode.name, selectedNode.val));
+          } else {
+            setRawCode("// Failed to fetch file content");
+            setFinalMinifiedContext(compressContext("// Error", selectedNode.name, 0));
+          }
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [selectedNode]);
 
   const copyToClipboard = async () => {
     navigator.clipboard.writeText(finalMinifiedContext);
@@ -87,14 +82,14 @@ export class ${selectedNode?.name?.split('/').pop()?.split('.')[0] || 'NodeClass
     setTimeout(() => setIsCopied(false), 2000);
 
     // [Background Automatic Session Dumper] 
-    // AI 주입용 컨텍스트 복사 시 자동으로 세션 덤프 실행
+    // AI 주입용 컨텍스트 복사 시 자동으로 세션 덤프 실행 (실제 글자수 반영)
     try {
       await fetch('/api/mcp/chat-history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           targetFile: selectedNode?.name || 'unknown_file',
-          rawCodeLength: rawDummyCode.length,
+          rawCodeLength: rawCode.length,
           compressedLength: finalMinifiedContext.length,
           promptInput: finalMinifiedContext,
           aiOutput: 'Waiting for AI response stream...' // 추후 스트림 마감 시점에 업데이트 가능
@@ -136,10 +131,11 @@ export class ${selectedNode?.name?.split('/').pop()?.split('.')[0] || 'NodeClass
             
             {!isMinified ? (
               <div className="bg-[#0d1117] border border-[#30363d] p-3 rounded text-xs text-gray-500 font-mono text-center">
-                Raw Code: ~12,450 Tokens <br/>
+                {isLoading ? "Fetching file content..." : `Raw Code: ~${Math.floor(rawCode.length / 3.5)} Tokens`} <br/>
                 <button 
+                  disabled={isLoading}
                   onClick={() => setIsMinified(true)}
-                  className="mt-3 w-full py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded transition-colors"
+                  className="mt-3 w-full py-2 bg-blue-600/20 hover:bg-blue-600/40 disabled:opacity-50 text-blue-400 rounded transition-colors"
                 >
                   초압축 골격 추출하기
                 </button>
@@ -147,9 +143,9 @@ export class ${selectedNode?.name?.split('/').pop()?.split('.')[0] || 'NodeClass
             ) : (
               <div className="relative bg-[#0d1117] border border-[#30363d] p-3 rounded text-xs text-gray-300 font-mono">
                 <div className="flex justify-between items-center mb-2 text-[#7ee787]">
-                  <span>Optimized: 42 Tokens (99% 절감)</span>
+                  <span>Optimized: ~{Math.floor(finalMinifiedContext.length / 3.5)} Tokens ({Math.floor((1 - finalMinifiedContext.length / Math.max(1, rawCode.length)) * 100)}% 절감)</span>
                 </div>
-                <pre className="overflow-x-auto whitespace-pre-wrap text-green-200 opacity-80 mt-2 p-2 bg-black/50 rounded">
+                <pre className="overflow-x-auto whitespace-pre-wrap text-green-200 opacity-80 mt-2 p-2 bg-black/50 rounded max-h-40">
                   {finalMinifiedContext}
                 </pre>
                 <button 

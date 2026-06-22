@@ -74,61 +74,14 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const mockNodes: any[] = [];
-    const mockLinks: any[] = [];
-    
-    const clusters = [
-      { id: 'c1', size: 150, colorType: 'green' }, 
-      { id: 'c2', size: 120, colorType: 'purple' }, 
-      { id: 'c3', size: 80, colorType: 'cyan' }, 
-      { id: 'c4', size: 60, colorType: 'orange' }, 
-    ];
-
-    const dirNames = ["cli-mcp-z00032", "cmd", "docs", "graph-ui", "internal", "scripts", "src", "test-infrastructure", "tests", "tools", "vendored"];
-    const nodeTypes = ['함수 (Function)', '필드 (Field)', '클래스 (Class)', '파일 (File)', '모듈 (Module)', '변수 (Variable)', '폴더 (Folder)', '열거형 (Enum)', '섹션 (Section)', '메서드 (Method)', '인터페이스 (Interface)', '라우트 (Route)', '타입 (Type)', '프로젝트 (Project)'];
-    const edgeTypes = ['정의함 (defines)', '사용됨 (usage)', '호출함 (calls)', '파일 포함 (contains file)', '폴더 포함 (contains folder)', '작성함 (writes)', '메서드 정의 (defines method)', '설정함 (configures)', '동시 변경 (changes with)', '상속함 (inherits)', '처리함 (handles)', '발생시킴 (raises)'];
-
-    let nodeId = 0;
-    clusters.forEach((cluster, i) => {
-      const clusterNodes = [];
-      for (let j = 0; j < cluster.size; j++) {
-        const id = `n${nodeId++}`;
-        clusterNodes.push(id);
-        const randomDir = dirNames[Math.floor(Math.random() * dirNames.length)];
-        const randomNodeType = nodeTypes[Math.floor(Math.random() * nodeTypes.length)];
-        mockNodes.push({
-          id,
-          group: i,
-          val: Math.random() > 0.95 ? 4 : (Math.random() > 0.8 ? 2 : 0.5), 
-          name: `${randomDir}/sys_${cluster.colorType}_${id}.ts`,
-          dir: randomDir, 
-          nodeType: randomNodeType,
-          clusterColor: cluster.colorType,
-          isDeadCode: Math.random() > 0.98,
-          isSpaghetti: Math.random() > 0.98
-        });
-      }
-      
-      for (let j = 0; j < cluster.size * 2.5; j++) {
-        const source = clusterNodes[Math.floor(Math.random() * clusterNodes.length)];
-        const target = clusterNodes[Math.floor(Math.random() * clusterNodes.length)];
-        const randomEdgeType = edgeTypes[Math.floor(Math.random() * edgeTypes.length)];
-        if (source !== target) {
-          mockLinks.push({ source, target, color: cluster.colorType, edgeType: randomEdgeType });
+    fetch('/api/mcp/scan')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.nodes) {
+          setData(data);
         }
-      }
-      
-      if (i > 0) {
-        for (let k = 0; k < 30; k++) {
-          const source = `n${Math.floor(Math.random() * (nodeId - cluster.size))}`;
-          const target = clusterNodes[Math.floor(Math.random() * clusterNodes.length)];
-          const randomEdgeType = edgeTypes[Math.floor(Math.random() * edgeTypes.length)];
-          mockLinks.push({ source, target, color: 'mixed', edgeType: randomEdgeType });
-        }
-      }
-    });
-    
-    setData({ nodes: mockNodes, links: mockLinks });
+      })
+      .catch(err => console.error("Failed to fetch real project data", err));
   }, []);
 
   const handleNodeClick = (node: any, event: MouseEvent) => {

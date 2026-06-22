@@ -112,7 +112,7 @@ export function CodeCanvas3D({
     const fullyHighlighted = (activeDirs.size === 0 || (sourceDirMatch && targetDirMatch)) && 
                              (activeNodes.size === 0 || (sourceNodeMatch && targetNodeMatch));
 
-    return fullyHighlighted ? 0.6 : 0.1;
+    return fullyHighlighted ? 2.5 : 0.3;
   }, [activeDirs, activeNodes, data]);
 
   const linkColor = useCallback((link: any) => {
@@ -128,13 +128,14 @@ export function CodeCanvas3D({
     const fullyHighlighted = (activeDirs.size === 0 || (sourceDirMatch && targetDirMatch)) && 
                              (activeNodes.size === 0 || (sourceNodeMatch && targetNodeMatch));
 
-    const opacity = fullyHighlighted ? 0.85 : 0.05;
+    const opacity = fullyHighlighted ? 1.0 : 0.1;
 
     if (link.color === 'green') return `rgba(0, 255, 136, ${opacity})`;
     if (link.color === 'purple') return `rgba(176, 66, 255, ${opacity})`;
     if (link.color === 'cyan') return `rgba(0, 229, 255, ${opacity})`;
     if (link.color === 'orange') return `rgba(255, 136, 0, ${opacity})`;
-    return `rgba(255, 255, 255, ${opacity * 0.4})`;
+    if (link.color === 'blue') return `rgba(88, 166, 255, ${opacity})`;
+    return `rgba(255, 255, 255, ${opacity * 0.8})`;
   }, [activeDirs, activeNodes, data]);
 
   return (
@@ -148,6 +149,9 @@ export function CodeCanvas3D({
         linkColor={linkColor} // Dynamic cluster colors
         linkVisibility={linkVisibility} // Properly hide filtered edges
         linkWidth={linkWidth} // Laser width
+        linkDirectionalParticles={3} // Data flowing dots
+        linkDirectionalParticleWidth={2.5}
+        linkDirectionalParticleSpeed={0.008}
         linkDirectionalArrowLength={0}
         nodeRelSize={6}
         enableNodeDrag={true}

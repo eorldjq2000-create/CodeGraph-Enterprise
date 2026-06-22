@@ -4,20 +4,25 @@
 import React, { useState, useEffect } from 'react';
 import { CodeCanvas3D } from '@/components/code-canvas-3d';
 import { AnalysisPanel } from '@/components/analysis-panel';
+import { TokenReducerPanel } from '@/components/token-reducer-panel';
 import { GraphData } from '@/lib/mcp/cypher';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Send, Sparkles, Layers, Copy } from "lucide-react";
 
 export default function DashboardPage() {
   const [data, setData] = useState<GraphData>({ nodes: [], links: [] });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedNode, setSelectedNode] = useState<any>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   
   const [activeDirs, setActiveDirs] = useState<Set<string>>(new Set([]));
   const [activeNodes, setActiveNodes] = useState<Set<string>>(new Set([]));
   const [activeEdges, setActiveEdges] = useState<Set<string>>(new Set([]));
+  
+  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  const [promptInput, setPromptInput] = useState("");
+  const [generatedPrompt, setGeneratedPrompt] = useState("");
+  const [curatedFiles, setCuratedFiles] = useState<any[]>([]);
 
   const toggleDir = (label: string) => {
     const next = new Set(activeDirs);
@@ -105,26 +110,35 @@ export default function DashboardPage() {
     setData({ nodes: mockNodes, links: mockLinks });
   }, []);
 
-  const handleAnalyzeClick = () => {
-    setIsAnalyzing(true);
-    setAnalysisResult(null);
-    // Simulate AI analysis delay
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      setAnalysisResult(
-        selectedNode?.isDeadCode 
-          ? "이 파일은 다른 모듈에서 전혀 호출되지 않고 있습니다. 안전하게 삭제하여 코드베이스를 최적화할 수 있습니다." 
-          : selectedNode?.isSpaghetti 
-            ? "순환 참조와 과도한 의존성이 감지되었습니다. 3개 이상의 모듈로 분리하는 리팩토링을 권장합니다." 
-            : "코드 상태가 매우 양호합니다. 캡슐화 규칙을 잘 준수하고 있습니다."
-      );
-    }, 1500);
+  const handleNodeClick = (node: any, event: MouseEvent) => {
+    if (event.shiftKey) {
+      const next = new Set(selectedNodes);
+      if (next.has(node.id)) next.delete(node.id);
+      else next.add(node.id);
+      setSelectedNodes(next);
+      setSelectedNode(null);
+      setCuratedFiles([]);
+    } else {
+      setSelectedNodes(new Set([node.id]));
+      setSelectedNode(node);
+      setCuratedFiles([]);
+    }
   };
 
-  const closeNodeDetail = () => {
-    setSelectedNode(null);
-    setIsAnalyzing(false);
-    setAnalysisResult(null);
+  const handleNodeRightClick = async (node: any, event: MouseEvent) => {
+    setSelectedNodes(new Set([node.id]));
+    setSelectedNode(node);
+    try {
+      const res = await fetch('/api/mcp/context-curator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeId: node.id })
+      });
+      const result = await res.json();
+      if (result.curatedFiles) setCuratedFiles(result.curatedFiles);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -143,62 +157,82 @@ export default function DashboardPage() {
           activeDirs={activeDirs} 
           activeNodes={activeNodes}
           activeEdges={activeEdges}
-          onNodeClick={(node) => { setSelectedNode(node); setAnalysisResult(null); setIsAnalyzing(false); }} 
+          selectedNodes={selectedNodes}
+          onNodeClick={handleNodeClick}
+          onNodeRightClick={handleNodeRightClick}
         />
       </div>
 
-      {/* Node Detail Panel (Functionality) */}
       {selectedNode && (
-        <div className="absolute bottom-4 left-4 w-80 z-10 flex flex-col gap-4 animate-in slide-in-from-bottom-5">
-          <Card className="bg-background/90 backdrop-blur-md border-border/50 shadow-2xl">
-            <CardHeader className="pb-3 border-b border-border/50">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-sm font-semibold text-blue-400 truncate">
-                  {selectedNode.name}
-                </CardTitle>
-                <button onClick={closeNodeDetail} className="text-muted-foreground hover:text-white transition-colors">✕</button>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4 flex flex-col gap-3">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">중요도 (Centrality):</span>
-                <span className="font-mono">{selectedNode.val * 10}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">연결된 의존성:</span>
-                <span className="font-mono">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {data.links.filter((l: any) => l.source.id === selectedNode.id || l.target.id === selectedNode.id || l.source === selectedNode.id || l.target === selectedNode.id).length}개
-                </span>
-              </div>
-              
-              <div className="mt-2 flex gap-2">
-                {selectedNode.isSpaghetti && <Badge variant="destructive">스파게티 경고</Badge>}
-                {selectedNode.isDeadCode && <Badge variant="secondary">데드 코드</Badge>}
-                {!selectedNode.isSpaghetti && !selectedNode.isDeadCode && <Badge className="bg-green-600">상태 양호</Badge>}
-              </div>
+        <TokenReducerPanel 
+          selectedNode={selectedNode} 
+          onClose={() => { setSelectedNode(null); setSelectedNodes(new Set()); setCuratedFiles([]); }} 
+        />
+      )}
 
-              {analysisResult ? (
-                <div className="mt-4 p-3 bg-blue-950/50 border border-blue-800/50 rounded-md text-xs leading-relaxed text-blue-200">
-                  <strong className="text-blue-400 block mb-1">🤖 AI 분석 결과:</strong>
-                  {analysisResult}
-                </div>
-              ) : (
-                <div className="mt-4">
-                  <button 
-                    onClick={handleAnalyzeClick}
-                    disabled={isAnalyzing}
-                    className="w-full py-2 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900 text-white rounded-md transition-colors flex justify-center items-center"
-                  >
-                    {isAnalyzing ? (
-                      <span className="animate-pulse">AI 분석 중...</span>
-                    ) : (
-                      "소스 코드 분석하기"
-                    )}
-                  </button>
-                </div>
-              )}
-            </CardContent>
+      {/* Curated Files UI */}
+      {curatedFiles.length > 0 && (
+        <div className="absolute top-1/2 right-4 -translate-y-1/2 w-80 z-20 flex flex-col gap-3">
+          <h3 className="text-sm font-bold text-blue-400 flex items-center gap-2">
+            <Layers size={16} /> 연관 파일 큐레이션 (Top 3)
+          </h3>
+          {curatedFiles.map((f, i) => (
+            <Card key={i} className="bg-[#0b1016]/95 border-blue-900/50 p-3 shadow-xl">
+              <div className="flex justify-between items-center text-xs text-gray-300">
+                <span className="font-mono text-blue-300 truncate">{f.name.split('/').pop()}</span>
+                <span className="text-green-400 font-bold">{(f.relevanceScore * 100).toFixed(0)}%</span>
+              </div>
+              <p className="text-[10px] text-gray-500 mt-1">{f.reason}</p>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Context-Aware Prompt Generator */}
+      {selectedNodes.size > 1 && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[600px] z-30">
+          <Card className="bg-[#0b1016]/95 backdrop-blur-md border-[#30363d] shadow-2xl p-4 flex flex-col gap-3">
+            <div className="flex justify-between items-center text-xs text-gray-400">
+              <span className="flex items-center gap-2 text-blue-400 font-bold">
+                <Sparkles size={14} /> AI Context Generator
+              </span>
+              <span>{selectedNodes.size}개 노드 선택됨</span>
+            </div>
+            
+            {generatedPrompt ? (
+              <div className="bg-[#0d1117] border border-[#30363d] p-3 rounded text-xs font-mono text-green-300 relative">
+                <pre className="whitespace-pre-wrap max-h-32 overflow-y-auto">{generatedPrompt}</pre>
+                <button 
+                  className="absolute top-2 right-2 p-1 bg-black/50 rounded hover:bg-black/80"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedPrompt);
+                    setGeneratedPrompt("");
+                  }}
+                >
+                  <Copy size={12}/>
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={promptInput}
+                  onChange={e => setPromptInput(e.target.value)}
+                  placeholder="예: 선택한 클래스들의 결합도를 분리해줘"
+                  className="flex-1 bg-[#0d1117] border border-[#30363d] rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                />
+                <button 
+                  onClick={() => {
+                    const prompt = `<Context>\nTarget Nodes: ${Array.from(selectedNodes).join(', ')}\n</Context>\n\nUser Request: ${promptInput}\n\nTask: Analyze the structural dependencies and provide an implementation plan.`;
+                    setGeneratedPrompt(prompt);
+                    setPromptInput("");
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center gap-2 text-sm transition-colors"
+                >
+                  <Send size={14}/> 생성
+                </button>
+              </div>
+            )}
           </Card>
         </div>
       )}
@@ -208,7 +242,7 @@ export default function DashboardPage() {
         <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
           CodeGraph Enterprise
         </h1>
-        <p className="text-xs text-blue-300/80 mt-1">미래지향적 프로젝트 시각화 엔진</p>
+        <p className="text-xs text-blue-300/80 mt-1">AI Token Optimization Edition</p>
       </div>
     </div>
   );

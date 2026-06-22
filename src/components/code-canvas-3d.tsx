@@ -10,11 +10,13 @@ import { GraphData, getColorForExtension } from "@/lib/mcp/cypher";
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
 
 export function CodeCanvas3D({ 
-  data, onNodeClick, 
-  activeDirs, activeNodes, activeEdges 
+  data, onNodeClick, onNodeRightClick,
+  activeDirs, activeNodes, activeEdges,
+  selectedNodes = new Set()
 }: { 
-  data: GraphData, onNodeClick?: (node: any) => void, 
-  activeDirs: Set<string>, activeNodes: Set<string>, activeEdges: Set<string> 
+  data: GraphData, onNodeClick?: (node: any, event: MouseEvent) => void, onNodeRightClick?: (node: any, event: MouseEvent) => void,
+  activeDirs: Set<string>, activeNodes: Set<string>, activeEdges: Set<string>,
+  selectedNodes?: Set<string>
 }) {
   const fgRef = useRef<any>();
 
@@ -37,31 +39,40 @@ export function CodeCanvas3D({
     const dirMatch = activeDirs.size === 0 || activeDirs.has(node.dir);
     const typeMatch = activeNodes.size === 0 || activeNodes.has(node.nodeType);
     const isHighlighted = dirMatch && typeMatch;
+    const isSelected = selectedNodes.has(node.id);
 
-    const scale = isHighlighted ? 1 : 0.3; // shrink unselected
-    const opacity = isHighlighted ? 0.6 : 0.05; // dim unselected
+    const scale = isHighlighted ? (isSelected ? 1.5 : 1) : 0.3;
+    const opacity = isHighlighted ? 0.6 : 0.05;
     const coreOpacity = isHighlighted ? 1 : 0.1;
 
     const group = new THREE.Group();
     
     const coreGeometry = new THREE.SphereGeometry(size * scale, 16, 16);
-    const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: coreOpacity });
+    const coreMaterial = new THREE.MeshBasicMaterial({ color: isSelected ? 0xffffff : 0xffffff, transparent: true, opacity: coreOpacity });
     const core = new THREE.Mesh(coreGeometry, coreMaterial);
     group.add(core);
     
-    const glowGeometry = new THREE.SphereGeometry(size * 1.8 * scale, 16, 16);
+    const glowGeometry = new THREE.SphereGeometry(size * (isSelected ? 2.2 : 1.8) * scale, 16, 16);
     const glowMaterial = new THREE.MeshBasicMaterial({ 
-      color: new THREE.Color(color), 
+      color: new THREE.Color(isSelected ? "#ff0055" : color), 
       transparent: true, 
-      opacity: opacity, 
+      opacity: isSelected ? 0.9 : opacity, 
       blending: THREE.AdditiveBlending,
       depthWrite: false 
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
     group.add(glow);
     
+    if (isSelected) {
+      const ringGeometry = new THREE.RingGeometry(size * scale * 2.5, size * scale * 2.8, 32);
+      const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xff0055, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.lookAt(new THREE.Vector3(0, 0, 1));
+      group.add(ring);
+    }
+
     return group;
-  }, [nodeColor, activeDirs, activeNodes]);
+  }, [nodeColor, activeDirs, activeNodes, selectedNodes]);
 
   const handleNodeDragEnd = useCallback((node: any) => {
     node.fx = node.x;
@@ -141,6 +152,7 @@ export function CodeCanvas3D({
         nodeRelSize={6}
         enableNodeDrag={true}
         onNodeClick={onNodeClick}
+        onNodeRightClick={onNodeRightClick}
         onNodeDragEnd={handleNodeDragEnd}
       />
     </div>

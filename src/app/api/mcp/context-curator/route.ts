@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { nodeId, nodes } = await request.json();
+    const { nodeId } = await request.json();
 
     if (!nodeId) {
       return NextResponse.json({ error: 'nodeId is required' }, { status: 400 });
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       curatedFiles,
       message: 'Top 3 context-critical files curated successfully.'
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

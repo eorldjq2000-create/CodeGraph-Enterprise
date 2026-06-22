@@ -6,8 +6,7 @@ import { CodeCanvas3D } from '@/components/code-canvas-3d';
 import { AnalysisPanel } from '@/components/analysis-panel';
 import { TokenReducerPanel } from '@/components/token-reducer-panel';
 import { GraphData } from '@/lib/mcp/cypher';
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Send, Sparkles, Layers, Copy } from "lucide-react";
 
 export default function DashboardPage() {
@@ -125,7 +124,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleNodeRightClick = async (node: any, event: MouseEvent) => {
+  const handleNodeRightClick = async (node: any, _event: MouseEvent) => {
     setSelectedNodes(new Set([node.id]));
     setSelectedNode(node);
     try {

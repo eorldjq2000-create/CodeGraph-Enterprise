@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       curatedFiles,
       message: 'Top 3 context-critical files curated successfully.'
     });
-  } catch (_error) {
+  } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

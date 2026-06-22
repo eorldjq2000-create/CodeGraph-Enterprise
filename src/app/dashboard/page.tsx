@@ -124,7 +124,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleNodeRightClick = async (node: any, _event: MouseEvent) => {
+  const handleNodeRightClick = async (node: any) => {
     setSelectedNodes(new Set([node.id]));
     setSelectedNode(node);
     try {

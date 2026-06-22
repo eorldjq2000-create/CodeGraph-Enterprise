@@ -81,10 +81,28 @@ export class ${selectedNode?.name?.split('/').pop()?.split('.')[0] || 'NodeClass
 
   const finalMinifiedContext = compressContext(rawDummyCode, selectedNode?.name || 'unknown', selectedNode?.val || 0);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     navigator.clipboard.writeText(finalMinifiedContext);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+
+    // [Background Automatic Session Dumper] 
+    // AI 주입용 컨텍스트 복사 시 자동으로 세션 덤프 실행
+    try {
+      await fetch('/api/mcp/chat-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetFile: selectedNode?.name || 'unknown_file',
+          rawCodeLength: rawDummyCode.length,
+          compressedLength: finalMinifiedContext.length,
+          promptInput: finalMinifiedContext,
+          aiOutput: 'Waiting for AI response stream...' // 추후 스트림 마감 시점에 업데이트 가능
+        })
+      });
+    } catch (e) {
+      console.error('Failed to dump session to background DB', e);
+    }
   };
 
   if (!selectedNode) return null;

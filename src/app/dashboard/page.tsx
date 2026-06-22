@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { CodeCanvas3D } from '@/components/code-canvas-3d';
 import { AnalysisPanel } from '@/components/analysis-panel';
 import { TokenReducerPanel } from '@/components/token-reducer-panel';
+import { ChatHistoryModal } from '@/components/chat-history-modal';
 import { GraphData } from '@/lib/mcp/cypher';
 import { Card } from "@/components/ui/card";
 import { Send, Sparkles, Layers, Copy } from "lucide-react";
@@ -22,6 +23,27 @@ export default function DashboardPage() {
   const [promptInput, setPromptInput] = useState("");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [curatedFiles, setCuratedFiles] = useState<any[]>([]);
+
+  const [chatHistoryNode, setChatHistoryNode] = useState<any>(null);
+  const [stats, setStats] = useState({ totalSessions: 0, totalTokensSaved: 0, savedCost: 0 });
+
+  useEffect(() => {
+    // Analytics Fetch
+    fetch('/api/mcp/chat-history')
+      .then(res => res.json())
+      .then(data => {
+        if(data) {
+          // Assume $15 per 1M tokens roughly for Claude 3.5 Sonnet / Opus
+          const cost = (data.totalTokensSaved || 0) * (15 / 1000000);
+          setStats({
+            totalSessions: data.totalSessions || 0,
+            totalTokensSaved: data.totalTokensSaved || 0,
+            savedCost: cost
+          });
+        }
+      })
+      .catch(e => console.error(e));
+  }, []);
 
   const toggleDir = (label: string) => {
     const next = new Set(activeDirs);
@@ -127,6 +149,7 @@ export default function DashboardPage() {
   const handleNodeRightClick = async (node: any) => {
     setSelectedNodes(new Set([node.id]));
     setSelectedNode(node);
+    setChatHistoryNode(node);
     try {
       const res = await fetch('/api/mcp/context-curator', {
         method: 'POST',
@@ -142,6 +165,13 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen w-full relative overflow-hidden bg-[#020208] text-foreground">
+      {/* Analytics Banner */}
+      <div className="absolute top-0 left-0 w-full bg-[#0d1117]/90 border-b border-[#30363d] p-2 z-40 text-center backdrop-blur-md">
+        <span className="text-xs font-medium text-gray-300">
+          이번 달 CodeGraph 파이프라인을 통해 총 <span className="text-[#58a6ff] font-bold">{stats.totalSessions}회</span> 대화 감지 ── 누적 <span className="text-[#7ee787] font-bold">{(stats.totalTokensSaved/10000).toFixed(1)}만 토큰</span> 방어, 총 <span className="text-[#d2a8ff] font-bold">${stats.savedCost.toFixed(2)}</span> 지갑 방어 성공
+        </span>
+      </div>
+
       <AnalysisPanel 
         activeDirs={activeDirs} toggleDir={toggleDir}
         activeNodes={activeNodes} toggleNode={toggleNode}
@@ -166,6 +196,13 @@ export default function DashboardPage() {
         <TokenReducerPanel 
           selectedNode={selectedNode} 
           onClose={() => { setSelectedNode(null); setSelectedNodes(new Set()); setCuratedFiles([]); }} 
+        />
+      )}
+
+      {chatHistoryNode && (
+        <ChatHistoryModal 
+          fileName={chatHistoryNode.name} 
+          onClose={() => setChatHistoryNode(null)} 
         />
       )}
 
@@ -222,9 +259,23 @@ export default function DashboardPage() {
                 />
                 <button 
                   onClick={() => {
-                    const prompt = `<Context>\nTarget Nodes: ${Array.from(selectedNodes).join(', ')}\n</Context>\n\nUser Request: ${promptInput}\n\nTask: Analyze the structural dependencies and provide an implementation plan.`;
+                    const targetFiles = Array.from(selectedNodes).join(', ');
+                    const prompt = `<Context>\nTarget Nodes: ${targetFiles}\n</Context>\n\nUser Request: ${promptInput}\n\nTask: Analyze the structural dependencies and provide an implementation plan.`;
                     setGeneratedPrompt(prompt);
                     setPromptInput("");
+
+                    // Background Session Dumper
+                    fetch('/api/mcp/chat-history', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        targetFile: targetFiles,
+                        rawCodeLength: 15000, // mock combined length
+                        compressedLength: prompt.length,
+                        promptInput: prompt,
+                        aiOutput: 'Waiting for AI bridging session...'
+                      })
+                    }).catch(e => console.error(e));
                   }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center gap-2 text-sm transition-colors"
                 >

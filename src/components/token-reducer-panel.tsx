@@ -10,17 +10,79 @@ export function TokenReducerPanel({ selectedNode, onClose }: { selectedNode: any
   const [isCopied, setIsCopied] = useState(false);
   const [isMinified, setIsMinified] = useState(false);
 
-  // Mock tree-sitter minified output
-  const mockMinifiedContext = `// Context Minified by CodeGraph
-import { A, B } from 'core';
-export class ${selectedNode?.name?.split('/').pop()?.split('.')[0] || 'NodeClass'} extends Component {
-  constructor(props: Props);
-  protected initGraph(): void;
-  public render(): ReactNode;
-}`;
+  // 안티그래비티 초압축 파싱 엔진 (Token Reduction Core)
+  const compressContext = (code: string, fileName: string, centrality: number) => {
+    if (!code) return "";
+
+    // 1단계: 주석 및 불필요한 줄바꿈/공백 제거 (RegEx Clean)
+    const cleaned = code
+      .replace(/\/\*[\s\S]*?\*\//g, "") // 여러 줄 주석 제거
+      .replace(/\/\/.*/g, "")           // 한 줄 주석 제거
+      .replace(/^\s*[\r\n]/gm, "");     // 빈 줄 제거
+
+    const lines = cleaned.split("\n");
+    const imports: string[] = [];
+    const skeleton: string[] = [];
+
+    // 2단계 & 3단계: 임포트문 격리 및 함수/클래스 선언부(Signature) 정밀 추출
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      
+      if (trimmed.startsWith("import ")) {
+        imports.push(trimmed);
+      } else if (
+        trimmed.startsWith("export ") ||
+        trimmed.startsWith("class ") ||
+        trimmed.startsWith("interface ") ||
+        trimmed.startsWith("function ") ||
+        trimmed.startsWith("public ") ||
+        trimmed.startsWith("private ") ||
+        trimmed.startsWith("async ")
+      ) {
+        // 함수의 내부 구현부 block은 떼어내고 선언부 뼈대만 마스킹
+        const signature = trimmed.split("{")[0].trim();
+        if (signature) skeleton.push(signature);
+      }
+    });
+
+    // AI가 가장 토큰 효율적으로 아키텍처를 이해할 수 있는 Minified JSON 구조체 반환
+    return JSON.stringify({
+      targetFile: fileName,
+      metrics: { betweennessCentrality: centrality },
+      architectureImports: imports,
+      codeSkeleton: skeleton
+    }, null, 0); // 공백을 0으로 설정하여 문자열 토큰 자체를 극소화
+  };
+
+  const rawDummyCode = `
+import { DependencyGraph } from '@/lib/graph';
+import { TokenReducer } from '@/lib/optimizer';
+
+/* 
+ * This is a highly complex module with thousands of lines of logic
+ * and massive internal implementations.
+ */
+export class ${selectedNode?.name?.split('/').pop()?.split('.')[0] || 'NodeClass'} {
+  private graph: DependencyGraph;
+
+  constructor() {
+    this.graph = new DependencyGraph();
+    // hundreds of lines of init...
+  }
+
+  // Parses the entire AST
+  public async parseAST(file: string): Promise<any> {
+    console.log("Parsing", file);
+    // ... massive logic ...
+    return {};
+  }
+}
+  `;
+
+  const finalMinifiedContext = compressContext(rawDummyCode, selectedNode?.name || 'unknown', selectedNode?.val || 0);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(mockMinifiedContext);
+    navigator.clipboard.writeText(finalMinifiedContext);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -70,7 +132,7 @@ export class ${selectedNode?.name?.split('/').pop()?.split('.')[0] || 'NodeClass
                   <span>Optimized: 42 Tokens (99% 절감)</span>
                 </div>
                 <pre className="overflow-x-auto whitespace-pre-wrap text-green-200 opacity-80 mt-2 p-2 bg-black/50 rounded">
-                  {mockMinifiedContext}
+                  {finalMinifiedContext}
                 </pre>
                 <button 
                   onClick={copyToClipboard}
